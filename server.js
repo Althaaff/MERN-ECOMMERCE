@@ -3,6 +3,7 @@ import express from "express";
 import { connectDB } from "./config/db.js";
 import cookieParser from "cookie-parser";
 import userRoutes from "./routes/user.routes.js";
+import adminRoutes from "./routes/admin.routes.js";
 
 dotenv.config();
 connectDB();
@@ -10,11 +11,16 @@ connectDB();
 const app = express();
 const PORT = process.env.PORT;
 
+// middlewares :
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-app.use("/api/users", userRoutes);
 
+// all required routes :
+app.use("/api/auth", userRoutes);
+app.use("/api/admin", adminRoutes);
+
+// listen the port :
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });

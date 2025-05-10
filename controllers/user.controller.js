@@ -9,11 +9,13 @@ export const createUser = asyncHandler(async (req, res) => {
   console.log(username, email, password);
 
   if (!username || !email || !password) {
-    throw new Error("Please fill all the inputs.");
+    return res.status(400).send("Please fill all the inputs."); // Return here
   }
 
   const userExists = await User.findOne({ email });
-  if (userExists) res.status(400).send("User already exists");
+  if (userExists) {
+    return res.status(400).send("User already exists"); // Return here
+  }
 
   const salt = await bcrypt.genSalt(10);
   const hashedPassword = await bcrypt.hash(password, salt);
@@ -23,19 +25,18 @@ export const createUser = asyncHandler(async (req, res) => {
     await newUser.save();
     createToken(res, newUser._id);
 
-    res.status(201).json({
-      message: "user registered successfully..",
+    return res.status(201).json({
+      // Return here
+      message: "User registered successfully.",
       _id: newUser._id,
       username: newUser.username,
       email: newUser.email,
       isAdmin: newUser.isAdmin,
     });
   } catch (error) {
-    res.status(400);
-    throw new Error("Invalid user data");
+    return res.status(400).send("Invalid user data"); // Send response here
   }
 });
-
 export const loginUser = asyncHandler(async (req, res, next) => {
   const { email, password } = req.body;
 
@@ -51,33 +52,53 @@ export const loginUser = asyncHandler(async (req, res, next) => {
       createToken(res, existingUser?._id);
 
       res.status(201).json({
-        message: "User login successfully",
-        _id: existingUser._id,
-        username: existingUser.username,
-        email: existingUser.email,
-        isAdmin: existingUser.isAdmin,
+        success: true,
+        message: "User login successfully!",
       });
-
-      return;
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: "Password is incorrect!",
+      });
     }
   }
 });
 
-export const logoutUser = asyncHandler(async (req, res, next) => {
-  try {
-    res.cookie("jwt", "", { httyOnly: true, expires: new Date(0) });
+export const logoutCurrentUser = asyncHandler(async (req, res) => {
+  res.cookie("jwt", "", {
+    httyOnly: true,
+    expires: new Date(0),
+  });
 
-    res.status(200).json({ message: "Logged out successfully" });
+  res.status(200).json({ message: "Logged out successfully" });
+});
+
+export const getAllUsers = asyncHandler(async (req, res, next) => {
+  try {
+    const allUsers = await User.find({});
+
+    res.json(allUsers);
   } catch (error) {
     next(error);
   }
 });
 
-export const getAllUser = asyncHandler(async (req, res, next) => {
+export const getCurrentUserProfile = asyncHandler(async (req, res, next) => {
   try {
-    const allUsers = await User.find({});
+    const user = await User.findById(req.user?._id);
 
-    res.json(allUsers);
+    console.log(user);
+
+    if (user) {
+      res.json({
+        _id: user?._id,
+        username: user.username,
+        email: user.email,
+      });
+    } else {
+      res.status(404).json({ message: "User not found!" });
+      throw new Error("User not found.");
+    }
   } catch (error) {
     next(error);
   }
